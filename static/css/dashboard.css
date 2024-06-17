@@ -49,7 +49,7 @@ color: rgb(6, 21, 10);
 } 
 
 .icn { 
-height: 30px; 
+height: 50px; 
 } 
 
 .menuicn { 
@@ -89,7 +89,7 @@ outline: none;
 border: none; 
 } 
 .searchbtn { 
-width: 50px; 
+width: 60px; 
 height: 42px; 
 display: flex; 
 align-items: center; 
@@ -100,7 +100,7 @@ cursor: pointer;
 } 
 
 .message { 
-padding: 10px;
+padding: 10px 3px;
 float: center;
 gap: 10px; 
 position: relative; 
