@@ -155,7 +155,6 @@
           startAutoRefresh();
       });
   </script>
-    <br>
     <div class="report-container">
       <div class="report-header">
         <h1 class="recent-Articles">Recent Activity</h1>
@@ -171,99 +170,93 @@
         
         <div id="google-chart" style="width: 100%; height: 400px;"></div>
         <div id="noDataMessage" class="no-data-message">No data available for the selected date range.</div>
-  
-  <script>
-    google.charts.load('current', {'packages':['corechart']});
-    google.charts.setOnLoadCallback(drawChart);
-
-    function drawChart() {
-      var jsonData = $.ajax({
-        url: "/api/sensor_data",
-        dataType: "json",
-        async: false
-      }).responseText;
-
-      var data = new google.visualization.DataTable();
-      data.addColumn('string', 'Time'); // Change x-axis label to "Time"
-      data.addColumn('number', 'Sensor Data');
-      data.addColumn('number', 'Liters'); // Change y-axis label to "Liters"
-      
-
-      var jsonDataParsed = JSON.parse(jsonData);
-      for (var i = 0; i < jsonDataParsed.labels.length; i++) {
-        data.addRow([jsonDataParsed.labels[i], jsonDataParsed.sensorData[i]/10, jsonDataParsed.volumeLiters[i]]);
-      }
-
-      var options = {
-        curveType: 'function',
-        legend: { position: 'bottom' },lineWidth: 2, // Set the line width normally
-        hAxis: { title: 'Time' }, // Set x-axis title to "Time"
-        vAxis: { title: 'Liters' } // Set y-axis title to "Liters"
-
-      };
-
-      var chart = new google.visualization.LineChart(document.getElementById('google-chart'));
-      chart.draw(data, options);
-
-      $('#filterByDateRangeBtn').on('click', function() {
-        var startDate = $('#startDatePicker').val();
-        var endDate = $('#endDatePicker').val();
-
-        if (startDate && endDate) {
-          var formattedStartDate = startDate.split('-').reverse().join('/');
-          var formattedEndDate = endDate.split('-').reverse().join('/');
-          
-          var filteredData = [];
-          if (formattedStartDate === formattedEndDate) {
+        <script>
+          google.charts.load('current', {'packages':['corechart']});
+          google.charts.setOnLoadCallback(drawChart);
+        
+          function drawChart() {
+            var jsonData = $.ajax({
+              url: "/api/sensor_data",
+              dataType: "json",
+              async: false
+            }).responseText;
+        
+            var jsonDataParsed = JSON.parse(jsonData);
+        
+            var data = new google.visualization.DataTable();
+            data.addColumn('string', 'Time'); // x-axis label
+            data.addColumn('number', 'Liters'); // y-axis label
+        
             for (var i = 0; i < jsonDataParsed.labels.length; i++) {
-              var currentDate = jsonDataParsed.labels[i].split(" ")[0];
-              if (currentDate === formattedStartDate) {
-                filteredData.push([jsonDataParsed.labels[i].split(" ")[1], jsonDataParsed.sensorData[i]/10, jsonDataParsed.volumeLiters[i]]);
-              }
+              data.addRow([jsonDataParsed.labels[i], jsonDataParsed.volumeLiters[i]]);
             }
-          } else {
-            for (var i = 0; i < jsonDataParsed.labels.length; i++) {
-              var currentDate = jsonDataParsed.labels[i].split(" ")[0];
-              if (currentDate >= formattedStartDate && currentDate <= formattedEndDate) {
-                filteredData.push([jsonDataParsed.labels[i].split(" ")[0], jsonDataParsed.sensorData[i]/10, jsonDataParsed.volumeLiters[i]]);
+        
+            var options = {
+              curveType: 'function',
+              legend: { position: 'bottom' },
+              lineWidth: 2,
+              hAxis: { title: 'Time' }, // x-axis title
+              vAxis: { title: 'Liters' } // y-axis title
+            };
+        
+            var chart = new google.visualization.LineChart(document.getElementById('google-chart'));
+            chart.draw(data, options);
+        
+            $('#filterByDateRangeBtn').on('click', function() {
+              var startDate = $('#startDatePicker').val();
+              var endDate = $('#endDatePicker').val();
+        
+              if (startDate && endDate) {
+                var formattedStartDate = startDate.split('-').reverse().join('/');
+                var formattedEndDate = endDate.split('-').reverse().join('/');
+                
+                var filteredData = [];
+                if (formattedStartDate === formattedEndDate) {
+                  // Dates are the same, filter by time only
+                  for (var i = 0; i < jsonDataParsed.labels.length; i++) {
+                    var currentDate = jsonDataParsed.labels[i];
+                    if (currentDate.startsWith(formattedStartDate)) {
+                      var timeOnly = currentDate.split(" ")[1];
+                      filteredData.push([timeOnly, jsonDataParsed.volumeLiters[i]]);
+                    }
+                  }
+                } else {
+                  // Dates are different, filter by full date range
+                  for (var i = 0; i < jsonDataParsed.labels.length; i++) {
+                    var currentDate = jsonDataParsed.labels[i];
+                    var currentFormattedDate = currentDate.split(" ")[0];
+                    if (currentFormattedDate >= formattedStartDate && currentFormattedDate <= formattedEndDate) {
+                      filteredData.push([currentDate, jsonDataParsed.volumeLiters[i]]);
+                    }
+                  }
+                }
+        
+                var filteredDataTable = new google.visualization.DataTable();
+                filteredDataTable.addColumn('string', 'Time');
+                filteredDataTable.addColumn('number', 'Liters');
+                filteredDataTable.addRows(filteredData);
+        
+                if (filteredData.length === 0) {
+                  $('#noDataMessage').show();
+                  return;
+                } else {
+                  $('#noDataMessage').hide();
+                }
+        
+                chart.draw(filteredDataTable, options);
+              } else {
+                alert("Please select a valid date range.");
               }
-            }
+            });
+        
+            $('#goToLatestBtn').on('click', function() {
+              // Redraw with original data
+              chart.draw(data, options);
+            });
           }
-
-          var filteredDataTable = new google.visualization.DataTable();
-          filteredDataTable.addColumn('string', 'Date');
-          filteredDataTable.addColumn('number', 'Sensor Data');
-          filteredDataTable.addColumn('number', 'Volume Liters');
-          filteredDataTable.addRows(filteredData);
-
-          // Show the "No Data Available" message if filtered data is empty
-          if (filteredData.length === 0) {
-            $('#noDataMessage').show();
-            return;
-          } else {
-            $('#noDataMessage').hide();
-          }
-
-          chart.draw(filteredDataTable, options);
-        } else {
-          alert("Please select a valid date range.");
-        }
-      });// Event handler for the latest data button
-
-
-               $('#goToLatestBtn').on('click', function() { // Event listener for "Go to Latest" button
-               for (var i = 0; i < jsonDataParsed.labels.length; i++) {
-                data.addRow([jsonDataParsed.labels[i], jsonDataParsed.sensorData[i]/10, jsonDataParsed.volumeLiters[i]]);
-              }
-                  fetchChartData(function(data) {
-                    drawChart(data);
-          
-                    lastDrawnTime = new Date().getTime(); // Update the last drawn time
-      });
-  });
-
-    }
-  </script>
+        </script>
+        
+        
   
       <br>
       <h2>Sensor Data Receiver</h2>
